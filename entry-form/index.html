@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101116">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="打ち込みフォーム">
+  <meta name="description" content="席名・名前・写真指名・ドリンク・ショットを入力して、LINEに貼り付ける文章を作成。">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon.svg">
+  <title>打ち込みフォーム</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101116;--surface:#20232d;--muted:#a5a6b5;--purple:#7c8cfa;--border:#454858;--red:#ff4545;--green:#9be6b0 }
+    * { box-sizing:border-box }
+    html { min-height:100%;background:var(--bg) }
+    body { margin:0; min-height:100dvh; background:var(--bg); color:#f7f7fb; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif }
+    .app { width:min(100%,580px); min-height:100dvh; margin:0 auto; padding:calc(env(safe-area-inset-top) + 28px) 24px calc(env(safe-area-inset-bottom) + 82px) }
+    .header { display:flex;align-items:center;gap:12px;margin:4px 0 28px }
+    .logo { display:grid;place-items:center;width:44px;height:44px;border-radius:13px;background:#272b44;color:#a7b1ff;flex-shrink:0 }
+    h1 { font-size:24px;line-height:1.35;margin:0;letter-spacing:.015em }
+    h2 { font-size:23px;line-height:1.45;margin:0 0 10px }
+    p { margin:0 0 22px;color:var(--muted);font-size:14px;line-height:1.65 }
+    .step-meta { display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:650;letter-spacing:.06em;color:var(--muted) }
+    .progress { display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0 35px }
+    .progress span { height:5px;border-radius:50px;background:#343743 }
+    .progress span.active { background:var(--purple) }
+    input { display:block;width:100%;min-height:59px;margin:20px 0 6px;padding:16px 17px;border:2px solid var(--border);border-radius:12px;background:var(--surface);color:#fff;font-size:18px;outline:none;-webkit-appearance:none }
+    input:focus { border-color:var(--purple) }
+    input.invalid,input.invalid:focus { border-color:var(--red) }
+    .error { color:var(--red);font-size:12px;min-height:16px;padding-left:2px }
+    .actions { display:flex;gap:10px;margin-top:16px }
+    button,.linkbutton { display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:52px;padding:13px 16px;border:0;border-radius:12px;font-size:16px;font-weight:700;text-align:center;touch-action:manipulation;text-decoration:none;cursor:pointer }
+    .actions>* { flex:1;min-width:0 }
+    .primary { background:var(--purple);color:#fff }
+    .secondary { background:#292c36;color:#fff }
+    .outline { color:#b5befa;background:transparent;border:1px solid #505775 }
+    button:disabled { opacity:.4;cursor:default }
+    pre { white-space:pre-wrap;overflow-wrap:anywhere;padding:18px;border-radius:12px;background:var(--surface);font-size:16px;line-height:1.85;user-select:text;-webkit-user-select:text;margin:18px 0 20px }
+    .full { width:100% }
+    .status { margin:12px 0 0;font-size:13px;line-height:1.5;color:var(--muted);min-height:18px }
+    .status.error-status { color:var(--red) }
+    .success { color:var(--green) }
+    .done { text-align:center;padding:48px 0 0 }
+    .check { font-size:60px;line-height:1.2;color:var(--green);margin-bottom:18px }
+    .done h2 { margin-bottom:28px }
+    .done .secondary,.done .primary,.done .outline { width:100%;margin-bottom:12px }
+    .assist { border-radius:12px;background:#1d2029;padding:14px 15px;color:#b3b5c4;font-size:12px;line-height:1.65;margin-top:15px }
+    .credit { position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));right:max(18px,env(safe-area-inset-right));font-size:11px;color:#818394;pointer-events:none;text-align:right;z-index:3 }
+    [hidden] { display:none!important }
+    @media (min-width:700px) { .app { padding-top:68px } }
+    @media (prefers-reduced-motion:no-preference) {button { transition:filter .15s } button:active {filter:brightness(1.12)}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <span class="logo" aria-hidden="true">
+        <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6M9 10h6M9 14h6M9 18h3"/></svg>
+      </span>
+      <h1>打ち込みフォーム</h1>
+    </header>
+
+    <div id="stage">
+      <div class="step-meta"><span id="stepLabel">STEP 1 / 5</span><span id="percent">20%</span></div>
+      <div class="progress" id="progress" aria-hidden="true"></div>
+    </div>
+
+    <section id="formView">
+      <h2 id="question">席名を入力</h2>
+      <p>入力したら「次へ」を押してください。</p>
+      <label for="entry" id="entryLabel" style="position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden">席名</label>
+      <input id="entry" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="入力してください" enterkeyhint="next" aria-describedby="error" />
+      <div class="error" id="error" aria-live="polite"></div>
+      <div class="actions">
+        <button type="button" class="secondary" id="backBtn">← 戻る</button>
+        <button type="button" class="primary" id="nextBtn">次へ →</button>
+      </div>
+    </section>
+
+    <section id="reviewView" hidden>
+      <h2>入力内容の確認</h2>
+      <p>内容を確認してコピーしてください。</p>
+      <pre id="preview"></pre>
+      <button class="primary full" type="button" id="copyBtn">コピーしてLINEへ</button>
+      <div class="actions">
+        <button class="secondary" type="button" id="reviewBackBtn">前へ戻る</button>
+        <button class="secondary" type="button" id="cancelBtn">キャンセル</button>
+      </div>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <div class="assist" id="manualHelp" hidden>自動コピーができない場合は、上の文章を長押しして「コピー」を選んでください。<br>コピー後、下のボタンからLINEを開けます。<div style="margin-top:12px"><button class="outline full" id="selectBtn" type="button">文章を選択する</button></div><div style="margin-top:8px"><a class="linkbutton secondary full" href="https://line.me/R/nv/chat">LINEを開く</a></div></div>
+    </section>
+
+    <section id="successView" class="done" hidden>
+      <div class="check" aria-hidden="true">✓</div>
+      <h2>コピー完了！</h2>
+      <button type="button" id="newBtn" class="primary">新しく入力する</button>
+      <a id="lineBtn" class="linkbutton secondary" href="https://line.me/R/nv/chat">LINEを開く</a>
+    </section>
+  </main>
+  <div class="credit">create by 糸守紅葉</div>
+  <script>
+    "use strict";
+    const fields=["席名","名前","写真指名","ドリンク","ショット"];
+    const lineUrl="https://line.me/R/nv/chat";
+    const values=["","","","",""];
+    let index=0;
+    let busy=false;
+    const get=id=>document.getElementById(id);
+    const output=()=>fields.map((f,i)=>f+"　"+values[i]).join("\n");
+    const progress=get("progress");
+    progress.replaceChildren(...fields.map(()=>document.createElement("span")));
+
+    function render(){
+      busy=false;
+      get("stage").hidden=false;
+      get("formView").hidden=index===5;
+      get("reviewView").hidden=index!==5;
+      get("successView").hidden=true;
+      get("stepLabel").textContent=index===5?"入力内容の確認":"STEP "+(index+1)+" / 5";
+      get("percent").textContent=index===5?"100%":((index+1)*20)+"%";
+      [...progress.children].forEach((span,i)=>span.classList.toggle("active",i<=index));
+      if(index<5){
+        get("question").textContent=fields[index]+"を入力";
+        get("entryLabel").textContent=fields[index];
+        get("entry").value=values[index];
+        get("entry").classList.remove("invalid");
+        get("entry").removeAttribute("aria-invalid");
+        get("error").textContent="";
+        get("backBtn").disabled=index===0;
+        get("nextBtn").textContent=index===4?"確認へ →":"次へ →";
+      }else{
+        get("preview").textContent=output();
+        get("status").textContent="";
+        get("status").classList.remove("error-status");
+        get("manualHelp").hidden=true;
+        get("copyBtn").textContent="コピーしてLINEへ";
+        get("copyBtn").disabled=false;
+      }
+    }
+    function save(){if(index<5)values[index]=get("entry").value;}
+    function next(){
+      if(!get("entry").value.trim()){
+        get("entry").classList.add("invalid");
+        get("entry").setAttribute("aria-invalid","true");
+        get("error").textContent="文字を入力してください";
+        return;
+      }
+      save();index++;render();
+    }
+    function back(){
+      if(busy)return;
+      if(index<5)save();
+      index=Math.max(0,index-1);
+      render();
+    }
+    function reset(){
+      if(busy)return;
+      values.fill("");index=0;render();
+    }
+    function showCopied(){
+      values.fill();index=0;
+      get("formView").hidden=true;
+      get("reviewView").hidden=true;
+      get("stage").hidden=true;
+      get("successView").hidden=false;
+      busy=false;
+    }
+    function fallbackCopy(text){
+      try{
+        const area=document.createElement("textarea");
+        area.value=text;
+        area.setAttribute("readonly","");
+        area.style.cssText="position:fixed;top:0;left:-9999px;opacity:0";
+        document.body.appendChild(area);
+        area.focus();
+        area.select();
+        area.setSelectionRange(0,text.length);
+        const ok=document.execCommand("copy");
+        area.remove();
+        return ok;
+      }catch(_){return false;}
+    }
+    async function copyAndOpen(){
+      if(busy)return;
+      busy=true;
+      get("copyBtn").disabled=true;
+      get("copyBtn").textContent="コピー中…";
+      get("status").textContent="コピー中…";
+      get("status").classList.remove("error-status");
+      const text=output();
+      let copied=false;
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(text);
+          copied=true;
+        }else{
+          copied=fallbackCopy(text);
+        }
+      }catch(_){
+        copied=fallbackCopy(text);
+      }
+      if(!copied){
+        busy=false;
+        get("copyBtn").disabled=false;
+        get("copyBtn").textContent="再試行";
+        get("status").textContent="自動コピーできませんでした";
+        get("status").classList.add("error-status");
+        get("manualHelp").hidden=false;
+        return;
+      }
+      showCopied();
+      // LINEアプリのトーク一覧を開く。OSの確認や手動選択が必要な場合あり。
+      try{
+        window.location.assign(lineUrl);
+      }catch(_){}
+    }
+    get("entry").addEventListener("input",()=>{
+      if(get("entry").value.trim()){
+        get("entry").classList.remove("invalid");
+        get("entry").removeAttribute("aria-invalid");
+        get("error").textContent="";
+      }
+    });
+    get("entry").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();next();}});
+    get("nextBtn").addEventListener("click",next);
+    get("backBtn").addEventListener("click",back);
+    get("reviewBackBtn").addEventListener("click",back);
+    get("cancelBtn").addEventListener("click",reset);
+    get("copyBtn").addEventListener("click",copyAndOpen);
+    get("newBtn").addEventListener("click",reset);
+    get("selectBtn").addEventListener("click",()=>{
+      const range=document.createRange();range.selectNodeContents(get("preview"));
+      const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+    });
+    render();
+    if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}
+  </script>
+</body>
+</html>
